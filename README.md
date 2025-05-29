@@ -6,18 +6,19 @@
 
 - Docker
 - Docker Compose
+- mysql-server
 
 ## Установка и запуск
 
 1. Клонируйте репозиторий:
 ```bash
-git clone 
+git clone https://github.com/kzarkaPY/GayOfTheDay/edit/main
 cd telegram_bot
 ```
 
-2. Создайте файл `.env` на основе `.env.example`:
+2. Создайте файл `.env`:
 ```bash
-cp .env.example .env
+nano .env
 ```
 
 3. Отредактируйте файл `.env` и укажите необходимые значения:
