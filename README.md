@@ -7,6 +7,7 @@
 - Docker
 - Docker Compose
 - mysql-server
+- python3
 
 ## Установка и запуск
 
