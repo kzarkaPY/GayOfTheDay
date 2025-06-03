@@ -21,7 +21,7 @@ Telegram bot that randomly selects users from a group chat and maintains statist
 1. Create a `.env` file in the project root with the following content:
 ```
 BOT_TOKEN=your_telegram_bot_token
-ADMIN_USER=kzarka1337
+ADMIN_USER=you_admin_user
 DB_HOST=db
 DB_PORT=5432
 DB_NAME=gayoftheday
