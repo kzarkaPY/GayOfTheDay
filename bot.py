@@ -86,7 +86,7 @@ async def run_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
         await update.message.reply_text("команду можно использовать только раз в день")
         return
 
-    messages = ["один", "два", "три", "четыре", "пять"]
+    messages = ["test1", "test2", "test3", "test4", "test5"]
     
     for msg in messages:
         await update.message.reply_text(msg)
@@ -129,7 +129,7 @@ async def pidor_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
         await update.message.reply_text("команду можно использовать только раз в день")
         return
 
-    messages = ["один", "два", "три", "четыре", "пять"]
+    messages = ["test1", "test2", "test3", "test4", "test5"]
     
     for msg in messages:
         await update.message.reply_text(msg)
