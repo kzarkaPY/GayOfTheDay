@@ -1,29 +1,22 @@
 version: '3.8'
 
 services:
-  db:
-    image: mariadb:latest
-    environment:
-      MYSQL_ROOT_PASSWORD: ${DB_PASSWORD}
-      MYSQL_DATABASE: ${DB_NAME}
-      MYSQL_USER: ${DB_USER}
-      MYSQL_PASSWORD: ${DB_PASSWORD}
-    volumes:
-      - db_data:/var/lib/mysql
-    restart: always
-
   bot:
     build: .
+    env_file: .env
     depends_on:
       - db
+    restart: always
+
+  db:
+    image: postgres:15-alpine
     environment:
-      - BOT_TOKEN=${BOT_TOKEN}
-      - DB_HOST=db
-      - DB_USER=${DB_USER}
-      - DB_PASSWORD=${DB_PASSWORD}
-      - DB_NAME=${DB_NAME}
-      - ADMIN_USERNAME=${ADMIN_USERNAME}
+      POSTGRES_DB: ${DB_NAME}
+      POSTGRES_USER: ${DB_USER}
+      POSTGRES_PASSWORD: ${DB_PASSWORD}
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
     restart: always
 
 volumes:
-  db_data: 
+  postgres_data: 
