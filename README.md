@@ -77,18 +77,3 @@ docker-compose restart
 - Для остановки:
 ```bash
 docker-compose down
-```
-
-## Резервное копирование
-
-Данные базы данных сохраняются в Docker volume `db_data`. Для создания резервной копии используйте:
-
-```bash
-docker-compose exec db mysqldump -u $DB_USER -p$DB_PASSWORD $DB_NAME > backup.sql
-```
-
-Для восстановления:
-
-```bash
-cat backup.sql | docker-compose exec -T db mysql -u $DB_USER -p$DB_PASSWORD $DB_NAME
-``` 
