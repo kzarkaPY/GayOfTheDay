@@ -3,6 +3,7 @@ from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import sessionmaker
 import os
 from datetime import datetime
+import pytz
 
 DATABASE_URL = f"postgresql://{os.getenv('DB_USER')}:{os.getenv('DB_PASSWORD')}@{os.getenv('DB_HOST')}:{os.getenv('DB_PORT')}/{os.getenv('DB_NAME')}"
 
@@ -10,6 +11,8 @@ engine = create_engine(DATABASE_URL)
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 
 Base = declarative_base()
+
+MOSCOW_TZ = pytz.timezone('Europe/Moscow')
 
 class User(Base):
     __tablename__ = "users"
@@ -26,8 +29,8 @@ class Season(Base):
 
     id = Column(Integer, primary_key=True)
     season_number = Column(Integer, nullable=False)
-    start_date = Column(DateTime, nullable=False)
-    end_date = Column(DateTime, nullable=True)
+    start_date = Column(DateTime(timezone=True), nullable=False)
+    end_date = Column(DateTime(timezone=True), nullable=True)
 
 class SeasonStats(Base):
     __tablename__ = "season_stats"
@@ -46,13 +49,13 @@ class CommandUsage(Base):
     id = Column(Integer, primary_key=True)
     chat_id = Column(BigInteger, nullable=False)
     command = Column(String, nullable=False)
-    last_used = Column(DateTime, nullable=False)
+    last_used = Column(DateTime(timezone=True), nullable=False)
 
 class SeasonControl(Base):
     __tablename__ = "season_control"
 
     id = Column(Integer, primary_key=True)
-    last_clear = Column(DateTime, nullable=True)
+    last_clear = Column(DateTime(timezone=True), nullable=True)
     current_season = Column(Integer, default=0)
     is_active = Column(Boolean, default=False)
 
