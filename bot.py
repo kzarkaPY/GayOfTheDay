@@ -39,7 +39,7 @@ async def check_command_cooldown(chat_id: int, command: str, cooldown_hours: int
                 return True
         else:
             # Other commands use hour-based cooldown
-            if last_usage.last_used < moscow_now - timedelta(hours=cooldown_hours):
+            if last_usage.last_used.astimezone(MOSCOW_TZ) < moscow_now - timedelta(hours=cooldown_hours):
                 return True
 
         return False
@@ -54,13 +54,14 @@ async def update_command_usage(chat_id: int, command: str):
             CommandUsage.command == command
         ).first()
 
+        moscow_now = datetime.now(MOSCOW_TZ)
         if usage:
-            usage.last_used = datetime.now(MOSCOW_TZ)
+            usage.last_used = moscow_now
         else:
             usage = CommandUsage(
                 chat_id=chat_id,
                 command=command,
-                last_used=datetime.now(MOSCOW_TZ)
+                last_used=moscow_now
             )
             db.add(usage)
         
@@ -75,26 +76,38 @@ async def get_random_user(update: Update) -> tuple:
 
     while True:
         random_offset = random.randint(0, chat_members - 1)
-        members = await update.effective_chat.get_members(limit=1, offset=random_offset)
-        member = members[0]
-        
-        if not member.user.is_bot:
-            return member.user.id, member.user.username
+        try:
+            member = await update.effective_chat.get_member(
+                user_id=(await update.effective_chat.get_administrators())[random_offset].user.id
+            )
+            if not member.user.is_bot:
+                return member.user.id, member.user.username
+        except IndexError:
+            continue
 
 async def run_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if not await check_command_cooldown(update.effective_chat.id, '/run', 24):
-        await update.message.reply_text("команду можно использовать только раз в день")
+        await context.bot.send_message(
+            chat_id=update.effective_chat.id,
+            text="Красавчик уже был выбран сегодня, приходите завтра"
+        )
         return
 
-    messages = ["test1", "test2", "test3", "test4", "test5"]
+    messages = ["КРУТИМ БАРАБАН🥁", "Гадаем на бинарных опционах📊", "Анализируем лунный гороскоп🌚", "Лунная призма дай мне силу💫", "Сектор приз на барабане🎯"]
     
     for msg in messages:
-        await update.message.reply_text(msg)
+        await context.bot.send_message(
+            chat_id=update.effective_chat.id,
+            text=msg
+        )
         await asyncio.sleep(1.5)
 
     user_id, username = await get_random_user(update)
     if not user_id:
-        await update.message.reply_text("Недостаточно участников в чате")
+        await context.bot.send_message(
+            chat_id=update.effective_chat.id,
+            text="Недостаточно участников в чате"
+        )
         return
 
     db = SessionLocal()
@@ -105,7 +118,7 @@ async def run_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
             db.add(user)
         else:
             user.run_count += 1
-            user.username = username  # Update username in case it changed
+            user.username = username
 
         season_control = db.query(SeasonControl).first()
         if not season_control:
@@ -120,24 +133,36 @@ async def run_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
         
         db.commit()
         await update_command_usage(update.effective_chat.id, '/run')
-        await update.message.reply_text(f"Красавчик дня - @{username}")
+        await context.bot.send_message(
+            chat_id=update.effective_chat.id,
+            text=f"🎉Красавчик сегодня - @{username}🥳"
+        )
     finally:
         db.close()
 
 async def pidor_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if not await check_command_cooldown(update.effective_chat.id, '/pidor', 24):
-        await update.message.reply_text("команду можно использовать только раз в день")
+        await context.bot.send_message(
+            chat_id=update.effective_chat.id,
+            text="^^^Пидор сверху^^^"
+        )
         return
 
-    messages = ["test1", "test2", "test3", "test4", "test5"]
+    messages = ["⚠️ВНИМАНИЕ⚠️", "ФЕДЕРАЛЬНЫЙ🔍РОЗЫСК🚨ПИДОРА", "Спутник запущен🚀", "Сводки👮Интерпола🚔проверены", "Твой🫵профиль в соцсетях👥проАНАЛизирован😨"]
     
     for msg in messages:
-        await update.message.reply_text(msg)
+        await context.bot.send_message(
+            chat_id=update.effective_chat.id,
+            text=msg
+        )
         await asyncio.sleep(1.5)
 
     user_id, username = await get_random_user(update)
     if not user_id:
-        await update.message.reply_text("Недостаточно участников в чате")
+        await context.bot.send_message(
+            chat_id=update.effective_chat.id,
+            text="Недостаточно участников в чате"
+        )
         return
 
     db = SessionLocal()
@@ -163,13 +188,19 @@ async def pidor_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
         
         db.commit()
         await update_command_usage(update.effective_chat.id, '/pidor')
-        await update.message.reply_text(f"pidor дня - @{username}")
+        await context.bot.send_message(
+            chat_id=update.effective_chat.id,
+            text=f"🏳️‍🌈Сегодня ПИДОР ДНЯ - @{username}👬"
+        )
     finally:
         db.close()
 
 async def sosal_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if not await check_command_cooldown(update.effective_chat.id, '/sosal', 1):
-        await update.message.reply_text("Команду можно использовать только раз в час")
+        await context.bot.send_message(
+            chat_id=update.effective_chat.id,
+            text="Команду можно использовать только раз в час"
+        )
         return
 
     user_id = update.effective_user.id
@@ -187,13 +218,19 @@ async def sosal_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
         db.commit()
         await update_command_usage(update.effective_chat.id, '/sosal')
-        await update.message.reply_text(f"Пользователь @{username} сосал {user.sosal_count} раз")
+        await context.bot.send_message(
+            chat_id=update.effective_chat.id,
+            text=f"@{username} сосал {user.sosal_count} раз(а)"
+        )
     finally:
         db.close()
 
 async def nesosal_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if not await check_command_cooldown(update.effective_chat.id, '/nesosal', 1):
-        await update.message.reply_text("Команду можно использовать только раз в час")
+        await context.bot.send_message(
+            chat_id=update.effective_chat.id,
+            text="Команду можно использовать только раз в час"
+        )
         return
 
     user_id = update.effective_user.id
@@ -203,7 +240,10 @@ async def nesosal_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
     try:
         user = db.query(User).filter(User.user_id == user_id).first()
         if not user:
-            await update.message.reply_text("Сначала нужно хотя бы раз сосать")
+            await context.bot.send_message(
+                chat_id=update.effective_chat.id,
+                text="Сначала нужно хотя бы раз пососать))"
+            )
             return
 
         user.sosal_count *= 2
@@ -211,7 +251,10 @@ async def nesosal_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
         db.commit()
         
         await update_command_usage(update.effective_chat.id, '/nesosal')
-        await update.message.reply_text(f"Врешь, сосал {user.sosal_count} раз")
+        await context.bot.send_message(
+            chat_id=update.effective_chat.id,
+            text=f"@{username} пиздабол, который отсосал {user.sosal_count} раз(а)"
+        )
     finally:
         db.close()
 
@@ -222,20 +265,29 @@ async def stats_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
         pidor_stats = db.query(User).filter(User.pidor_count > 0).order_by(User.pidor_count.desc()).all()
 
         if not run_stats and not pidor_stats:
-            await update.message.reply_text("Статистика пуста")
+            await context.bot.send_message(
+                chat_id=update.effective_chat.id,
+                text="Статистика пуста"
+            )
             return
 
         if run_stats:
-            run_message = "Топ красавчиков:\n"
+            run_message = "🏆Топ красавчиков дня🏆:\n"
             for i, user in enumerate(run_stats, 1):
                 run_message += f"{i}. @{user.username}: {user.run_count}\n"
-            await update.message.reply_text(run_message)
+            await context.bot.send_message(
+                chat_id=update.effective_chat.id,
+                text=run_message
+            )
 
         if pidor_stats:
-            pidor_message = "Топ пидоров:\n"
+            pidor_message = "🍆Каждый из них ебался в жопу🍆:\n"
             for i, user in enumerate(pidor_stats, 1):
-                pidor_message += f"{i}. @{user.username}: {user.pidor_count}\n"
-            await update.message.reply_text(pidor_message)
+                pidor_message += f"{i}. @{user.username}: {user.pidor_count} раз(а)\n"
+            await context.bot.send_message(
+                chat_id=update.effective_chat.id,
+                text=pidor_message
+            )
     finally:
         db.close()
 
@@ -245,13 +297,19 @@ async def sostats_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
         sosal_stats = db.query(User).filter(User.sosal_count > 0).order_by(User.sosal_count.desc()).all()
 
         if not sosal_stats:
-            await update.message.reply_text("Статистика пуста")
+            await context.bot.send_message(
+                chat_id=update.effective_chat.id,
+                text="Статистика пуста"
+            )
             return
 
-        message = "Топ сосунов:\n"
+        message = "Сосущий ТОП:\n"
         for i, user in enumerate(sosal_stats, 1):
-            message += f"{i}. @{user.username}: {user.sosal_count}\n"
-        await update.message.reply_text(message)
+            message += f"{i}. @{user.username}: {user.sosal_count} раз(а)\n"
+        await context.bot.send_message(
+            chat_id=update.effective_chat.id,
+            text=message
+        )
     finally:
         db.close()
 
@@ -260,16 +318,23 @@ async def clear_season(update: Update, context: ContextTypes.DEFAULT_TYPE, force
     try:
         season_control = db.query(SeasonControl).first()
         if not season_control:
-            await update.message.reply_text("Сезон еще не начался")
+            await context.bot.send_message(
+                chat_id=update.effective_chat.id,
+                text="Сезон еще не начался"
+            )
             return
 
+        moscow_now = datetime.now(MOSCOW_TZ)
         if not force:
             if not season_control.last_clear:
-                season_control.last_clear = datetime.now(MOSCOW_TZ) - timedelta(days=91)
+                season_control.last_clear = moscow_now - timedelta(days=91)
             
-            days_since_last_clear = (datetime.now(MOSCOW_TZ) - season_control.last_clear).days
+            days_since_last_clear = (moscow_now - season_control.last_clear.astimezone(MOSCOW_TZ)).days
             if days_since_last_clear < 90:
-                await update.message.reply_text(f"Нужно подождать еще {90 - days_since_last_clear} дней")
+                await context.bot.send_message(
+                    chat_id=update.effective_chat.id,
+                    text=f"Сброс сезона возможен через {90 - days_since_last_clear} дней"
+                )
                 return
 
         # Save current season stats
@@ -290,7 +355,7 @@ async def clear_season(update: Update, context: ContextTypes.DEFAULT_TYPE, force
 
         # Update season control
         season_control.current_season += 1
-        season_control.last_clear = datetime.now(MOSCOW_TZ)
+        season_control.last_clear = moscow_now
         season_control.is_active = False
 
         # Reset current stats
@@ -300,7 +365,10 @@ async def clear_season(update: Update, context: ContextTypes.DEFAULT_TYPE, force
             user.sosal_count = 0
 
         db.commit()
-        await update.message.reply_text(f"Сезон {current_season} завершен")
+        await context.bot.send_message(
+            chat_id=update.effective_chat.id,
+            text=f"Сезон {current_season} завершен"
+        )
     finally:
         db.close()
 
@@ -332,11 +400,18 @@ async def seasons_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
     try:
         season_control = db.query(SeasonControl).first()
         if not season_control or season_control.current_season == 0:
-            await update.message.reply_text("Нет завершенных сезонов")
+            await context.bot.send_message(
+                chat_id=update.effective_chat.id,
+                text="Нет завершенных сезонов"
+            )
             return
 
         keyboard = await create_season_keyboard(season_control.current_season)
-        await update.message.reply_text("Выберите сезон:", reply_markup=keyboard)
+        await context.bot.send_message(
+            chat_id=update.effective_chat.id,
+            text="Выберите сезон:",
+            reply_markup=keyboard
+        )
     finally:
         db.close()
 
@@ -345,11 +420,18 @@ async def soseasons_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
     try:
         season_control = db.query(SeasonControl).first()
         if not season_control or season_control.current_season == 0:
-            await update.message.reply_text("Нет завершенных сезонов")
+            await context.bot.send_message(
+                chat_id=update.effective_chat.id,
+                text="Нет завершенных сезонов"
+            )
             return
 
         keyboard = await create_season_keyboard(season_control.current_season)
-        await update.message.reply_text("Выберите сезон для просмотра статистики сосунов:", reply_markup=keyboard)
+        await context.bot.send_message(
+            chat_id=update.effective_chat.id,
+            text="Выберите сезон для просмотра статистики сосунов:",
+            reply_markup=keyboard
+        )
     finally:
         db.close()
 
@@ -358,7 +440,7 @@ async def handle_season_callback(update: Update, context: ContextTypes.DEFAULT_T
     await query.answer()
 
     if query.data == "cancel":
-        await query.message.edit_text("Отменено")
+        await query.edit_message_text("Отменено")
         return
 
     season_number = int(query.data.split("_")[1])
@@ -372,7 +454,7 @@ async def handle_season_callback(update: Update, context: ContextTypes.DEFAULT_T
             ).order_by(SeasonStats.sosal_count.desc()).all()
 
             if not stats:
-                await query.message.edit_text(f"Нет статистики сосунов для сезона {season_number}")
+                await query.edit_message_text(f"Нет статистики сосунов для сезона {season_number}")
                 return
 
             message = f"Статистика сосунов сезона {season_number}:\n"
@@ -391,23 +473,23 @@ async def handle_season_callback(update: Update, context: ContextTypes.DEFAULT_T
             ).order_by(SeasonStats.pidor_count.desc()).all()
 
             if not run_stats and not pidor_stats:
-                await query.message.edit_text(f"Нет статистики для сезона {season_number}")
+                await query.edit_message_text(f"Нет статистики для сезона {season_number}")
                 return
 
             message = f"Статистика сезона {season_number}:\n\n"
             
             if run_stats:
-                message += "Топ красавчиков:\n"
+                message += "🎉Топ красавчиков:\n"
                 for i, stat in enumerate(run_stats, 1):
                     message += f"{i}. @{stat.username}: {stat.run_count}\n"
                 message += "\n"
 
             if pidor_stats:
-                message += "Топ пидоров:\n"
+                message += "🏳️‍🌈Топ пидоров:\n"
                 for i, stat in enumerate(pidor_stats, 1):
                     message += f"{i}. @{stat.username}: {stat.pidor_count}\n"
 
-        await query.message.edit_text(message)
+        await query.edit_message_text(message)
     finally:
         db.close()
 
@@ -431,4 +513,4 @@ def main():
     application.run_polling()
 
 if __name__ == "__main__":
-    main() 
+    main()
