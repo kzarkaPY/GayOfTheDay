@@ -1,48 +1,66 @@
-# Telegram Bot
+# Gay of the Day Bot
 
-Бот для Telegram с функциями случайного выбора участников и ведения статистики.
+Telegram bot that randomly selects users from a group chat and maintains statistics across seasons.
 
-## Требования
+## Features
 
-- Docker
-- Docker Compose
-- mysql-server
-- python3
+- Random user selection with `/run` and `/pidor` commands
+- Season-based statistics tracking
+- User interaction tracking with `/sosal` and `/nesosal` commands
+- Historical season data viewing
+- Admin controls for season management
 
-## Установка и запуск
+## Requirements
 
-1. Клонируйте репозиторий:
-```bash
-git clone https://github.com/kzarkaPY/GayOfTheDay/edit/main
-cd telegram_bot
+- Python 3.11+
+- PostgreSQL
+- Docker and Docker Compose
+
+## Setup
+
+1. Create a `.env` file in the project root with the following content:
+```
+BOT_TOKEN=your_telegram_bot_token
+ADMIN_USER=kzarka1337
+DB_HOST=db
+DB_PORT=5432
+DB_NAME=gayoftheday
+DB_USER=postgres
+DB_PASSWORD=your_password
 ```
 
-2. Создайте файл `.env`:
+2. Build and run the containers:
 ```bash
-nano .env
+docker-compose up -d --build
 ```
 
-3. Отредактируйте файл `.env` и укажите необходимые значения:
-- BOT_TOKEN - токен вашего Telegram бота (получите у @BotFather)
-- DB_USER - имя пользователя базы данных
-- DB_PASSWORD - пароль для базы данных
-- DB_NAME - имя базы данных
-- ADMIN_USERNAME - имя пользователя администратора (для команды /admclear)
+## Commands
 
-4. Запустите контейнеры:
-```bash
-docker-compose up -d
-```
+- `/run` - Select a random user as "красавчик дня" (once per day)
+- `/pidor` - Select a random user as "pidor дня" (once per day)
+- `/sosal` - Increment user's "sosal" counter (once per hour)
+- `/nesosal` - Double user's "sosal" counter (once per hour)
+- `/stats` - Show current season statistics
+- `/sostats` - Show current season "sosal" statistics
+- `/clear` - Start a new season (90 days cooldown)
+- `/admclear` - Force start a new season (admin only)
+- `/seasons` - View historical season statistics
+- `/soseasons` - View historical season "sosal" statistics
 
-## Команды бота
+## Deployment
 
-- `/run` - случайный выбор двух участников группы
-- `/stats` - показать статистику выборов
-- `/sosal` - подсчет использования команды для пользователя
-- `/nesosal` - умножение результата команды /sosal на 2
-- `/clear` - очистка текущей статистики и создание нового сезона (раз в 90 дней)
-- `/admclear` - принудительная очистка статистики (только для администратора)
-- `/seasons` - просмотр статистики предыдущих сезонов
+1. Clone the repository to your Ubuntu server
+2. Make sure Docker and Docker Compose are installed
+3. Create the `.env` file with your configuration
+4. Run `docker-compose up -d` to start the bot
+5. The bot will automatically create all necessary database tables on first run
+
+## Notes
+
+- The bot uses Moscow timezone (Europe/Moscow) for all time-based operations
+- Season statistics are preserved when starting a new season
+- Only the last 8 seasons are shown in the seasons menu
+- Commands that select random users have a 1.5-second delay between messages to avoid Telegram's rate limits
 
 ## Обслуживание
 
