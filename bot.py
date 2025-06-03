@@ -80,8 +80,11 @@ async def get_random_user(update: Update) -> tuple:
             member = await update.effective_chat.get_member(
                 user_id=(await update.effective_chat.get_administrators())[random_offset].user.id
             )
-            if not member.user.is_bot:
-                return member.user.id, member.user.username
+            user = member.user
+            if not user.is_bot:
+                # Используем username если есть, иначе first_name
+                display_name = user.username if user.username else user.first_name
+                return user.id, display_name
         except IndexError:
             continue
 
@@ -102,7 +105,7 @@ async def run_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
         )
         await asyncio.sleep(1.5)
 
-    user_id, username = await get_random_user(update)
+    user_id, display_name = await get_random_user(update)
     if not user_id:
         await context.bot.send_message(
             chat_id=update.effective_chat.id,
@@ -114,11 +117,11 @@ async def run_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
     try:
         user = db.query(User).filter(User.user_id == user_id).first()
         if not user:
-            user = User(user_id=user_id, username=username, run_count=1)
+            user = User(user_id=user_id, username=display_name, run_count=1)
             db.add(user)
         else:
             user.run_count += 1
-            user.username = username
+            user.username = display_name
 
         season_control = db.query(SeasonControl).first()
         if not season_control:
@@ -133,9 +136,11 @@ async def run_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
         
         db.commit()
         await update_command_usage(update.effective_chat.id, '/run')
+        # Добавляем @ только если это username
+        name_with_prefix = f"@{display_name}" if user.username == display_name else display_name
         await context.bot.send_message(
             chat_id=update.effective_chat.id,
-            text=f"🎉Красавчик сегодня - @{username}🥳"
+            text=f"🎉Красавчик сегодня - {name_with_prefix}🥳"
         )
     finally:
         db.close()
@@ -157,7 +162,7 @@ async def pidor_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
         )
         await asyncio.sleep(1.5)
 
-    user_id, username = await get_random_user(update)
+    user_id, display_name = await get_random_user(update)
     if not user_id:
         await context.bot.send_message(
             chat_id=update.effective_chat.id,
@@ -169,11 +174,11 @@ async def pidor_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
     try:
         user = db.query(User).filter(User.user_id == user_id).first()
         if not user:
-            user = User(user_id=user_id, username=username, pidor_count=1)
+            user = User(user_id=user_id, username=display_name, pidor_count=1)
             db.add(user)
         else:
             user.pidor_count += 1
-            user.username = username
+            user.username = display_name
 
         season_control = db.query(SeasonControl).first()
         if not season_control:
@@ -188,9 +193,11 @@ async def pidor_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
         
         db.commit()
         await update_command_usage(update.effective_chat.id, '/pidor')
+        # Добавляем @ только если это username
+        name_with_prefix = f"@{display_name}" if user.username == display_name else display_name
         await context.bot.send_message(
             chat_id=update.effective_chat.id,
-            text=f"🏳️‍🌈Сегодня ПИДОР ДНЯ - @{username}👬"
+            text=f"🏳️‍🌈Сегодня ПИДОР ДНЯ - {name_with_prefix}👬"
         )
     finally:
         db.close()
@@ -204,7 +211,7 @@ async def sosal_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
         return
 
     user_id = update.effective_user.id
-    username = update.effective_user.username
+    username = update.effective_user.username or update.effective_user.first_name
 
     db = SessionLocal()
     try:
@@ -218,9 +225,10 @@ async def sosal_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
         db.commit()
         await update_command_usage(update.effective_chat.id, '/sosal')
+        name_with_prefix = f"@{username}" if user.username == username else username
         await context.bot.send_message(
             chat_id=update.effective_chat.id,
-            text=f"@{username} сосал {user.sosal_count} раз(а)"
+            text=f"{name_with_prefix} сосал {user.sosal_count} раз(а)"
         )
     finally:
         db.close()
@@ -234,7 +242,7 @@ async def nesosal_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
         return
 
     user_id = update.effective_user.id
-    username = update.effective_user.username
+    username = update.effective_user.username or update.effective_user.first_name
 
     db = SessionLocal()
     try:
@@ -251,9 +259,10 @@ async def nesosal_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
         db.commit()
         
         await update_command_usage(update.effective_chat.id, '/nesosal')
+        name_with_prefix = f"@{username}" if user.username == username else username
         await context.bot.send_message(
             chat_id=update.effective_chat.id,
-            text=f"@{username} пиздабол, который отсосал {user.sosal_count} раз(а)"
+            text=f"{name_with_prefix} пиздабол, который отсосал {user.sosal_count} раз(а)"
         )
     finally:
         db.close()
@@ -274,7 +283,8 @@ async def stats_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
         if run_stats:
             run_message = "🏆Топ красавчиков дня🏆:\n"
             for i, user in enumerate(run_stats, 1):
-                run_message += f"{i}. @{user.username}: {user.run_count}\n"
+                name_with_prefix = f"@{user.username}" if '@' in user.username else user.username
+                run_message += f"{i}. {name_with_prefix}: {user.run_count}\n"
             await context.bot.send_message(
                 chat_id=update.effective_chat.id,
                 text=run_message
@@ -283,7 +293,8 @@ async def stats_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
         if pidor_stats:
             pidor_message = "🍆Каждый из них ебался в жопу🍆:\n"
             for i, user in enumerate(pidor_stats, 1):
-                pidor_message += f"{i}. @{user.username}: {user.pidor_count} раз(а)\n"
+                name_with_prefix = f"@{user.username}" if '@' in user.username else user.username
+                pidor_message += f"{i}. {name_with_prefix}: {user.pidor_count} раз(а)\n"
             await context.bot.send_message(
                 chat_id=update.effective_chat.id,
                 text=pidor_message
@@ -305,7 +316,8 @@ async def sostats_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
         message = "Сосущий ТОП:\n"
         for i, user in enumerate(sosal_stats, 1):
-            message += f"{i}. @{user.username}: {user.sosal_count} раз(а)\n"
+            name_with_prefix = f"@{user.username}" if '@' in user.username else user.username
+            message += f"{i}. {name_with_prefix}: {user.sosal_count} раз(а)\n"
         await context.bot.send_message(
             chat_id=update.effective_chat.id,
             text=message
