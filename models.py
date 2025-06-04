@@ -50,6 +50,7 @@ class CommandUsage(Base):
     chat_id = Column(BigInteger, nullable=False)
     command = Column(String, nullable=False)
     last_used = Column(DateTime(timezone=True), nullable=False)
+    user_id = Column(BigInteger, nullable=True)
 
 class SeasonControl(Base):
     __tablename__ = "season_control"
